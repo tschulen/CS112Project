@@ -2,18 +2,18 @@
 using System.Collections;
 
 public class InAttackRange : MonoBehaviour {
-	private PlayerController player;
+	private CharControl player;
 	public GameObject camera;
 	// Use this for initialization
 	void Start () {
-		player = transform.parent.GetComponent<PlayerController>();
+		player = transform.parent.GetComponent<CharControl>();
 
 	}
 	
 	// Update is called once per frame
 	void Update () {
 		if (player.colliding) {
-			camera.transform.position = new Vector2 (camera.transform.position.x, camera.transform.position.y + 1);
+			//camera.transform.position = new Vector2 (camera.transform.position.x, camera.transform.position.y + 1);
 		}
 	}
 
