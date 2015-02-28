@@ -4,8 +4,8 @@ using System.Collections;
 
 public class PlayerStats : MonoBehaviour {
 
-	public int startingHealth = 100;
-	public int currentHealth;
+	public float startingHealth = 100;
+	public float currentHealth;
 	public Slider healthSlider;
 	public bool isDead = false;
 
@@ -17,7 +17,7 @@ public class PlayerStats : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		healthSlider.value = currentHealth;
-		if (currentHealth == 0)
+		if (currentHealth <= 0)
 			isDead = true;
 	}
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
 
 public enum JumpState
 {
@@ -11,6 +12,9 @@ public enum JumpState
 public class CharControl : MonoBehaviour {
 
 	public int PlayerNum = 0;
+	GameObject enemy;
+	public float dashCD = .5f;
+	ParticleSystem dashParts;
 
 	//Character controls
 	KeyCode moveLeft;
@@ -49,8 +53,8 @@ public class CharControl : MonoBehaviour {
 	public float damageTimeStamp = 0;
 
 	//Dash attack variables
-	public float dashX = 5f;
-	public float dashY = 5f;
+	public float dashX = 5000f;
+	public float dashY = 50f;
 
 
 	GameObject player;
@@ -62,13 +66,22 @@ public class CharControl : MonoBehaviour {
 		if(PlayerNum == 0) {
 			Debug.LogError("Player Number not set in inspector, set and retry");
 		}
-		var playerList = GameObject.FindGameObjectsWithTag ("Player");
-		if(this.name.Equals ("Player1")){
-			player = playerList[0];
-		}else if (this.name.Equals ("Player2")){
-			player = playerList[1];
-		}
+
 		playerStats = gameObject.GetComponent <PlayerStats> ();
+		GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+		for(int i = 0; i < players.Length; i++){
+			if(players[i].GetComponent<CharControl>().PlayerNum != PlayerNum) {
+				enemy = players[i];
+				break;
+			}
+		}
+		if(PlayerNum == 1){
+			playerStats.healthSlider = GameObject.Find ("Canvas/Player1Health/Slider").gameObject.GetComponent<Slider>();
+		}else if (PlayerNum == 2){
+			playerStats.healthSlider = GameObject.Find ("Canvas/Player2Health/Slider").gameObject.GetComponent<Slider>();
+		}
+
+		dashParts = transform.Find("dashParticles").gameObject.GetComponent<ParticleSystem>();
 
 		Debug.Log (this.name);
 	}
@@ -96,7 +109,7 @@ public class CharControl : MonoBehaviour {
 				if (rigidbody2D.velocity.x <= maxSpeed)
 					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
 			} else if (moveH == 0 && isGrounded()) {
-				rigidbody2D.velocity = new Vector2 (0, rigidbody2D.velocity.y);
+				//rigidbody2D.velocity = new Vector2 (0, rigidbody2D.velocity.y);
 			} //set animation to idle here.
 		    else if (moveH < 0) {
 				if (rigidbody2D.velocity.x > -maxSpeed)
@@ -148,34 +161,38 @@ public class CharControl : MonoBehaviour {
 
 	void DashAttack(){
 
-			float xTotal = 0f;
-			float yTotal = 0f;
-			if (!dashLock) { //player can only dash once per jump
-				if (Input.GetKey (dashRight)) {
-					Flip (1);
-					//rigidbody2D.AddForce (new Vector2 (100, 0));
-					xTotal = dashX;
-					//playerStats.currentHealth-=10;
-				    lockTimeStamp = Time.time + 1.5f;
-					dashTimeStamp = Time.time + .4f;
-					dashLock = true;
-					isDashing = true;
-				} else if (Input.GetKey (dashLeft)) {
-					Flip (-1);
-					//rigidbody2D.AddForce (new Vector2 (-100, 0));
-					xTotal = -dashX;
-					lockTimeStamp = Time.time + 1.5f;
-					dashTimeStamp = Time.time + .4f;
-					//playerStats.currentHealth-=10;
-					dashLock = true;
-					isDashing = true;
-				}
-				//dashLock = true;
+		float xTotal = 0f;
+		float yTotal = 0f;
+		if (!dashLock && (Input.GetKey(dashLeft) || Input.GetKey (dashRight))) { //player can only dash once per jump
+			rigidbody2D.drag = 10f;
+		    rigidbody2D.velocity = new Vector2 (0, rigidbody2D.velocity.y); //Vector2.zero
+			dashParts.Play(); //play 
+			if (Input.GetKey (dashRight)) {
+				Flip (1);
+				//rigidbody2D.AddForce (new Vector2 (100, 0));
+				xTotal = dashX;
+				//playerStats.currentHealth-=10;
+			    lockTimeStamp = Time.time + dashCD;
+				dashTimeStamp = Time.time + .4f;
+				dashLock = true;
+				isDashing = true;
+			} else if (Input.GetKey (dashLeft)) {
+				Flip (-1);
+				//rigidbody2D.AddForce (new Vector2 (-100, 0));
+				xTotal = -dashX;
+				lockTimeStamp = Time.time + dashCD;
+				dashTimeStamp = Time.time + .4f;
+				//playerStats.currentHealth-=10;
+				dashLock = true;
+				isDashing = true;
+			}
+			//dashLock = true;
 
-			//Jump = JumpState.FALLING;
-			//CurrJumpForce = 0;
-			rigidbody2D.AddForce (new Vector2 (xTotal, yTotal));
-		}
+		//Jump = JumpState.FALLING;
+		//CurrJumpForce = 0;
+
+		rigidbody2D.AddForce (new Vector2 (xTotal, yTotal));
+	}
 
 	//	if(player.name.Equals ("Player1")
 	}
@@ -204,6 +221,7 @@ public class CharControl : MonoBehaviour {
 			dashLock = false;
 		}
 		if (dashTimeStamp <= Time.time) {
+			rigidbody2D.drag = 0;
 			isDashing = false;
 		}
 		if (damageTimeStamp <= Time.time) {
@@ -213,7 +231,8 @@ public class CharControl : MonoBehaviour {
 
 	void dealDamage() {
 		if ((colliding == true) && (isDashing == true) && (singleDamageDealt == false)) {
-			playerStats.currentHealth-=10;
+
+			enemy.GetComponent<PlayerStats>().currentHealth-=(5 * (Mathf.Abs (rigidbody2D.velocity.x)/10));
 		//	playerStats.currentHealth-=10;
 			singleDamageDealt = true;
 			damageTimeStamp = Time.time + .5f;
