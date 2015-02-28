@@ -95,7 +95,9 @@ public class CharControl : MonoBehaviour {
 			if (moveH > 0) {
 				if (rigidbody2D.velocity.x <= maxSpeed)
 					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
-			} else if (moveH == 0); //set animation to idle here.
+			} else if ((moveH == 0) && isGrounded()) {
+				rigidbody2D.velocity = new Vector2(0, rigidbody2D.velocity.y);
+			} //set animation to idle here.
 		    else if (moveH < 0) {
 				if (rigidbody2D.velocity.x > -maxSpeed)
 					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
