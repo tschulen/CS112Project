@@ -10,6 +10,8 @@ public enum JumpState
 
 public class CharControl : MonoBehaviour {
 
+	public int PlayerNum = 0;
+
 	//Character controls
 	KeyCode moveLeft;
 	KeyCode moveRight;
@@ -57,6 +59,9 @@ public class CharControl : MonoBehaviour {
 
 
 	void Awake () {
+		if(PlayerNum == 0) {
+			Debug.LogError("Player Number not set in inspector, set and retry");
+		}
 		var playerList = GameObject.FindGameObjectsWithTag ("Player");
 		if(this.name.Equals ("Player1")){
 			player = playerList[0];
@@ -173,7 +178,7 @@ public class CharControl : MonoBehaviour {
 	//	if(player.name.Equals ("Player1")
 	}
 	void assignPlayerControls(){
-		if(player.name.Equals("Player1")){
+		if(PlayerNum == 1){
 			moveLeft = KeyCode.A;
 			moveRight = KeyCode.D;
 			jump = KeyCode.W;
@@ -181,7 +186,7 @@ public class CharControl : MonoBehaviour {
 			dashRight = KeyCode.E;
 			Debug.Log ("Player 1 Controls Set");
 		}
-		else if (player.name.Equals("Player2")){
+		else if (PlayerNum == 2){
 			moveLeft = KeyCode.J;
 			moveRight = KeyCode.L;
 			jump = KeyCode.I;
