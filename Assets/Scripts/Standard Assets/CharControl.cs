@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public enum JumpState
@@ -35,16 +35,26 @@ public class CharControl : MonoBehaviour {
 	public int horizDirection = 1;
 
 	float moveH;
+	//control bools
 	public bool colliding = false;
+	public bool dashLock = false;
+	public bool isDashing = false;
+	public bool singleDamageDealt = false;
 
+	//cooldown timers
+	public float lockTimeStamp = 0;
+	public float dashTimeStamp = 0;
+	public float damageTimeStamp = 0;
 
 	//Dash attack variables
-	public float dashX = 10f;
-	public float dashY = 10f;
-	public bool dashLock = false;
+	public float dashX = 5f;
+	public float dashY = 5f;
+
 
 	GameObject player;
 	PlayerStats playerStats;
+
+
 
 	void Awake () {
 		var playerList = GameObject.FindGameObjectsWithTag ("Player");
@@ -66,9 +76,17 @@ public class CharControl : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate () {
 		if (!playerStats.isDead) {
-			float moveH = Input.GetAxis ("Horizontal");
+			float moveH = 0; //= Input.GetAxis ("Horizontal");
+
+			if (Input.GetKey(moveRight) || Input.GetKey (moveLeft)) {
+				if( Input.GetKey(moveRight) ) {
+					moveH = 1;
+				} else {
+					moveH = -1;
+				}
+			}
+
 			Flip (moveH);
-		
 			if (moveH > 0) {
 				if (rigidbody2D.velocity.x <= maxSpeed)
 					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
@@ -77,6 +95,8 @@ public class CharControl : MonoBehaviour {
 				if (rigidbody2D.velocity.x > -maxSpeed)
 					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
 			}
+			DashAttack (); //Player can dash in any JumpState
+			dealDamage();
 		}
 	}
 
@@ -84,7 +104,7 @@ public class CharControl : MonoBehaviour {
 	  if (!playerStats.isDead) {
 			switch (Jump) {
 			case JumpState.GROUNDED: 
-				dashLock = false;
+			//	dashLock = false;
 				if (Input.GetKey (jump) && isGrounded ()) {
 					Jump = JumpState.JUMPING;
 				}
@@ -112,36 +132,46 @@ public class CharControl : MonoBehaviour {
 				break;
 			
 			}
+			lockfuction();
 
-			DashAttack (); //Player can dash in any JumpState
+
 		}
 	}
+
 
 	void DashAttack(){
-		float xTotal = 0f;
-		float yTotal = 0f;
-		if (!dashLock) { //player can only dash once per jump
-			if (Input.GetKey (dashRight)) {
-				Flip (1);
-				//rigidbody2D.AddForce (new Vector2 (100, 0));
-				xTotal = dashX;
-				playerStats.currentHealth-=10;
-				dashLock = true;
-			} else if (Input.GetKey (dashLeft)) {
-				Flip (-1);
-				//rigidbody2D.AddForce (new Vector2 (-100, 0));
-				xTotal = -dashX;
-				playerStats.currentHealth-=10;
-				dashLock = true;
-			}
-			//dashLock = true;
+
+			float xTotal = 0f;
+			float yTotal = 0f;
+			if (!dashLock) { //player can only dash once per jump
+				if (Input.GetKey (dashRight)) {
+					Flip (1);
+					//rigidbody2D.AddForce (new Vector2 (100, 0));
+					xTotal = dashX;
+					//playerStats.currentHealth-=10;
+				    lockTimeStamp = Time.time + 1.5f;
+					dashTimeStamp = Time.time + .4f;
+					dashLock = true;
+					isDashing = true;
+				} else if (Input.GetKey (dashLeft)) {
+					Flip (-1);
+					//rigidbody2D.AddForce (new Vector2 (-100, 0));
+					xTotal = -dashX;
+					lockTimeStamp = Time.time + 1.5f;
+					dashTimeStamp = Time.time + .4f;
+					//playerStats.currentHealth-=10;
+					dashLock = true;
+					isDashing = true;
+				}
+				//dashLock = true;
+
+			//Jump = JumpState.FALLING;
+			//CurrJumpForce = 0;
+			rigidbody2D.AddForce (new Vector2 (xTotal, yTotal));
 		}
-		//Jump = JumpState.FALLING;
-		//CurrJumpForce = 0;
-		rigidbody2D.AddForce (new Vector2 (xTotal, yTotal));
 
+	//	if(player.name.Equals ("Player1")
 	}
-
 	void assignPlayerControls(){
 		if(player.name.Equals("Player1")){
 			moveLeft = KeyCode.A;
@@ -161,6 +191,27 @@ public class CharControl : MonoBehaviour {
 		}
 	}
 
+	// 
+	void lockfuction(){
+		if (lockTimeStamp <= Time.time){
+			dashLock = false;
+		}
+		if (dashTimeStamp <= Time.time) {
+			isDashing = false;
+		}
+		if (damageTimeStamp <= Time.time) {
+			singleDamageDealt = false;
+		}
+	}
+
+	void dealDamage() {
+		if ((colliding == true) && (isDashing == true) && (singleDamageDealt == false)) {
+			playerStats.currentHealth-=10;
+		//	playerStats.currentHealth-=10;
+			singleDamageDealt = true;
+			damageTimeStamp = Time.time + .5f;
+		}
+	}
 	void Flip(float moveH)
 	{
 		if (moveH > 0)
