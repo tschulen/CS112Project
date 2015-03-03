@@ -4,7 +4,7 @@ using System.Collections;
 
 public class PlayerStats : MonoBehaviour {
 
-	public float startingHealth = 100;
+	public float startingHealth = 100f;
 	public float currentHealth;
 	public Slider healthSlider;
 	public bool isDead = false;

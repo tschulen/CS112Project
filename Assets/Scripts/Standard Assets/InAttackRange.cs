@@ -22,11 +22,16 @@ public class InAttackRange : MonoBehaviour {
 
 	void OnTriggerEnter2D (Collider2D objectCollidedWith) {
 		if (objectCollidedWith.tag == "Player") { 
+			player.enemy = objectCollidedWith.gameObject;
 			player.colliding = true;
+
 		}
 	}
 
 	void OnTriggerExit2D (Collider2D objectCollidedWith) {
-		player.colliding = false;
+		if (objectCollidedWith.tag == "Player") {
+			player.colliding = false;
+			player.enemy = null;
+		}
 	}
 }

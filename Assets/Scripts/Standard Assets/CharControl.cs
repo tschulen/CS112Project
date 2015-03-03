@@ -10,9 +10,10 @@ public enum JumpState
 }
 
 public class CharControl : MonoBehaviour {
-
+	
+	SpawnManager spawnMan;
 	public int PlayerNum = 0;
-	GameObject enemy;
+	public GameObject enemy;
 	public float dashCD = .5f;
 	ParticleSystem dashParts;
 
@@ -66,24 +67,30 @@ public class CharControl : MonoBehaviour {
 		if(PlayerNum == 0) {
 			Debug.LogError("Player Number not set in inspector, set and retry");
 		}
-
+		spawnMan = GameObject.Find ("Code").GetComponent<SpawnManager>();
 		playerStats = gameObject.GetComponent <PlayerStats> ();
-		GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+		/*GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
 		for(int i = 0; i < players.Length; i++){
 			if(players[i].GetComponent<CharControl>().PlayerNum != PlayerNum) {
 				enemy = players[i];
 				break;
 			}
-		}
+		}*/
+
+
+		dashParts = transform.Find("dashParticles").gameObject.GetComponent<ParticleSystem>();
+
+		//Debug.Log (this.name);
+	}
+
+	public void findHealth() {
 		if(PlayerNum == 1){
 			playerStats.healthSlider = GameObject.Find ("Canvas/Player1Health/Slider").gameObject.GetComponent<Slider>();
 		}else if (PlayerNum == 2){
 			playerStats.healthSlider = GameObject.Find ("Canvas/Player2Health/Slider").gameObject.GetComponent<Slider>();
+		} else {
+			Debug.LogError("no playernum set");
 		}
-
-		dashParts = transform.Find("dashParticles").gameObject.GetComponent<ParticleSystem>();
-
-		Debug.Log (this.name);
 	}
 
 	void Start () {
@@ -155,6 +162,10 @@ public class CharControl : MonoBehaviour {
 			lockfuction();
 
 
+		} else {
+			playerStats.isDead = false;
+			Debug.Log ("in dying update");
+			spawnMan.killPlayer (gameObject);
 		}
 	}
 
@@ -230,7 +241,7 @@ public class CharControl : MonoBehaviour {
 	}
 
 	void dealDamage() {
-		if ((colliding == true) && (isDashing == true) && (singleDamageDealt == false)) {
+		if ((colliding == true) && (isDashing == true) && (singleDamageDealt == false) && enemy != null) {
 
 			enemy.GetComponent<PlayerStats>().currentHealth-=(5 * (Mathf.Abs (rigidbody2D.velocity.x)/10));
 		//	playerStats.currentHealth-=10;
