@@ -61,6 +61,8 @@ public class CharControl : MonoBehaviour {
 	GameObject player;
 	PlayerStats playerStats;
 
+	public AudioClip dashAud;
+	public AudioClip[] hitAuds;
 
 
 	void Awake () {
@@ -175,6 +177,7 @@ public class CharControl : MonoBehaviour {
 		float xTotal = 0f;
 		float yTotal = 0f;
 		if (!dashLock && (Input.GetKey(dashLeft) || Input.GetKey (dashRight))) { //player can only dash once per jump
+			AudioSource.PlayClipAtPoint(dashAud, transform.position);
 			rigidbody2D.drag = 10f;
 		    rigidbody2D.velocity = new Vector2 (0, rigidbody2D.velocity.y); //Vector2.zero
 			dashParts.Play(); //play 
@@ -242,9 +245,8 @@ public class CharControl : MonoBehaviour {
 
 	void dealDamage() {
 		if ((colliding == true) && (isDashing == true) && (singleDamageDealt == false) && enemy != null) {
-
+			AudioSource.PlayClipAtPoint(hitAuds[Random.Range(0, hitAuds.Length)], transform.position);
 			enemy.GetComponent<PlayerStats>().currentHealth-=(5 * (Mathf.Abs (rigidbody2D.velocity.x)/10));
-		//	playerStats.currentHealth-=10;
 			singleDamageDealt = true;
 			damageTimeStamp = Time.time + .5f;
 		}
