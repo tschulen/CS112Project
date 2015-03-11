@@ -115,14 +115,14 @@ public class CharControl : MonoBehaviour {
 
 			Flip (moveH);
 			if (moveH > 0) {
-				if (rigidbody2D.velocity.x <= maxSpeed)
-					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
+				if (GetComponent<Rigidbody2D>().velocity.x <= maxSpeed)
+					GetComponent<Rigidbody2D>().AddForce (new Vector2 (moveH * addSpeed, 0));
 			} else if (moveH == 0 && isGrounded()) {
 				//rigidbody2D.velocity = new Vector2 (0, rigidbody2D.velocity.y);
 			} //set animation to idle here.
 		    else if (moveH < 0) {
-				if (rigidbody2D.velocity.x > -maxSpeed)
-					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
+				if (GetComponent<Rigidbody2D>().velocity.x > -maxSpeed)
+					GetComponent<Rigidbody2D>().AddForce (new Vector2 (moveH * addSpeed, 0));
 			}
 			DashAttack (); //Player can dash in any JumpState
 			dealDamage();
@@ -145,7 +145,7 @@ public class CharControl : MonoBehaviour {
 					var timeDiff = Time.deltaTime * 10;
 					var forceToAdd = PlusJumpForce * timeDiff;
 					CurrJumpForce += forceToAdd;
-					rigidbody2D.AddForce (new Vector2 (0, forceToAdd));
+					GetComponent<Rigidbody2D>().AddForce (new Vector2 (0, forceToAdd));
 				} else {
 					Jump = JumpState.FALLING;
 					CurrJumpForce = 0;
@@ -154,7 +154,7 @@ public class CharControl : MonoBehaviour {
 				break;
 			
 			case JumpState.FALLING: 
-				if (isGrounded () && rigidbody2D.velocity.y <= 0) {
+				if (isGrounded () && GetComponent<Rigidbody2D>().velocity.y <= 0) {
 					Jump = JumpState.GROUNDED;
 				}
 			//DashAttack ();
@@ -178,8 +178,8 @@ public class CharControl : MonoBehaviour {
 		float yTotal = 0f;
 		if (!dashLock && (Input.GetKey(dashLeft) || Input.GetKey (dashRight))) { //player can only dash once per jump
 			AudioSource.PlayClipAtPoint(dashAud, transform.position);
-			rigidbody2D.drag = 10f;
-		    rigidbody2D.velocity = new Vector2 (0, rigidbody2D.velocity.y); //Vector2.zero
+			GetComponent<Rigidbody2D>().drag = 10f;
+		    GetComponent<Rigidbody2D>().velocity = new Vector2 (0, GetComponent<Rigidbody2D>().velocity.y); //Vector2.zero
 			dashParts.Play(); //play 
 			if (Input.GetKey (dashRight)) {
 				Flip (1);
@@ -205,7 +205,7 @@ public class CharControl : MonoBehaviour {
 		//Jump = JumpState.FALLING;
 		//CurrJumpForce = 0;
 
-		rigidbody2D.AddForce (new Vector2 (xTotal, yTotal));
+		GetComponent<Rigidbody2D>().AddForce (new Vector2 (xTotal, yTotal));
 	}
 
 	//	if(player.name.Equals ("Player1")
@@ -235,7 +235,7 @@ public class CharControl : MonoBehaviour {
 			dashLock = false;
 		}
 		if (dashTimeStamp <= Time.time) {
-			rigidbody2D.drag = 0;
+			GetComponent<Rigidbody2D>().drag = 0;
 			isDashing = false;
 		}
 		if (damageTimeStamp <= Time.time) {
@@ -246,7 +246,7 @@ public class CharControl : MonoBehaviour {
 	void dealDamage() {
 		if ((colliding == true) && (isDashing == true) && (singleDamageDealt == false) && enemy != null) {
 			AudioSource.PlayClipAtPoint(hitAuds[Random.Range(0, hitAuds.Length)], transform.position);
-			enemy.GetComponent<PlayerStats>().currentHealth-=(5 * (Mathf.Abs (rigidbody2D.velocity.x)/10));
+			enemy.GetComponent<PlayerStats>().currentHealth-=(5 * (Mathf.Abs (GetComponent<Rigidbody2D>().velocity.x)/10));
 			singleDamageDealt = true;
 			damageTimeStamp = Time.time + .5f;
 		}
