@@ -1,5 +1,6 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
 
 public enum JumpState
 {
@@ -9,6 +10,12 @@ public enum JumpState
 }
 
 public class CharControl : MonoBehaviour {
+	
+	SpawnManager spawnMan;
+	public int PlayerNum = 0;
+	public GameObject enemy;
+	public float dashCD = .5f;
+	ParticleSystem dashParts;
 
 	//Character controls
 	KeyCode moveLeft;
@@ -35,27 +42,57 @@ public class CharControl : MonoBehaviour {
 	public int horizDirection = 1;
 
 	float moveH;
+	//control bools
 	public bool colliding = false;
+	public bool dashLock = false;
+	public bool isDashing = false;
+	public bool singleDamageDealt = false;
 
+	//cooldown timers
+	public float lockTimeStamp = 0;
+	public float dashTimeStamp = 0;
+	public float damageTimeStamp = 0;
 
 	//Dash attack variables
-	public float dashX = 10f;
-	public float dashY = 10f;
-	public bool dashLock = false;
+	public float dashX = 5000f;
+	public float dashY = 50f;
+
 
 	GameObject player;
 	PlayerStats playerStats;
 
-	void Awake () {
-		var playerList = GameObject.FindGameObjectsWithTag ("Player");
-		if(this.name.Equals ("Player1")){
-			player = playerList[0];
-		}else if (this.name.Equals ("Player2")){
-			player = playerList[1];
-		}
-		playerStats = player.GetComponent <PlayerStats> ();
+	public AudioClip dashAud;
+	public AudioClip[] hitAuds;
 
-		Debug.Log (this.name);
+
+	void Awake () {
+		if(PlayerNum == 0) {
+			Debug.LogError("Player Number not set in inspector, set and retry");
+		}
+		spawnMan = GameObject.Find ("Code").GetComponent<SpawnManager>();
+		playerStats = gameObject.GetComponent <PlayerStats> ();
+		/*GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+		for(int i = 0; i < players.Length; i++){
+			if(players[i].GetComponent<CharControl>().PlayerNum != PlayerNum) {
+				enemy = players[i];
+				break;
+			}
+		}*/
+
+
+		dashParts = transform.Find("dashParticles").gameObject.GetComponent<ParticleSystem>();
+
+		//Debug.Log (this.name);
+	}
+
+	public void findHealth() {
+		if(PlayerNum == 1){
+			playerStats.healthSlider = GameObject.Find ("Canvas/Player1Health/Slider").gameObject.GetComponent<Slider>();
+		}else if (PlayerNum == 2){
+			playerStats.healthSlider = GameObject.Find ("Canvas/Player2Health/Slider").gameObject.GetComponent<Slider>();
+		} else {
+			Debug.LogError("no playernum set");
+		}
 	}
 
 	void Start () {
@@ -66,17 +103,29 @@ public class CharControl : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate () {
 		if (!playerStats.isDead) {
-			float moveH = Input.GetAxis ("Horizontal");
-			Flip (moveH);
-		
-			if (moveH > 0) {
-				if (rigidbody2D.velocity.x <= maxSpeed)
-					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
-			} else if (moveH == 0); //set animation to idle here.
-		    else if (moveH < 0) {
-				if (rigidbody2D.velocity.x > -maxSpeed)
-					rigidbody2D.AddForce (new Vector2 (moveH * addSpeed, 0));
+			float moveH = 0; //= Input.GetAxis ("Horizontal");
+
+			if (Input.GetKey(moveRight) || Input.GetKey (moveLeft)) {
+				if( Input.GetKey(moveRight) ) {
+					moveH = 1;
+				} else {
+					moveH = -1;
+				}
 			}
+
+			Flip (moveH);
+			if (moveH > 0) {
+				if (GetComponent<Rigidbody2D>().velocity.x <= maxSpeed)
+					GetComponent<Rigidbody2D>().AddForce (new Vector2 (moveH * addSpeed, 0));
+			} else if (moveH == 0 && isGrounded()) {
+				//rigidbody2D.velocity = new Vector2 (0, rigidbody2D.velocity.y);
+			} //set animation to idle here.
+		    else if (moveH < 0) {
+				if (GetComponent<Rigidbody2D>().velocity.x > -maxSpeed)
+					GetComponent<Rigidbody2D>().AddForce (new Vector2 (moveH * addSpeed, 0));
+			}
+			DashAttack (); //Player can dash in any JumpState
+			dealDamage();
 		}
 	}
 
@@ -84,7 +133,7 @@ public class CharControl : MonoBehaviour {
 	  if (!playerStats.isDead) {
 			switch (Jump) {
 			case JumpState.GROUNDED: 
-				dashLock = false;
+			//	dashLock = false;
 				if (Input.GetKey (jump) && isGrounded ()) {
 					Jump = JumpState.JUMPING;
 				}
@@ -96,7 +145,7 @@ public class CharControl : MonoBehaviour {
 					var timeDiff = Time.deltaTime * 10;
 					var forceToAdd = PlusJumpForce * timeDiff;
 					CurrJumpForce += forceToAdd;
-					rigidbody2D.AddForce (new Vector2 (0, forceToAdd));
+					GetComponent<Rigidbody2D>().AddForce (new Vector2 (0, forceToAdd));
 				} else {
 					Jump = JumpState.FALLING;
 					CurrJumpForce = 0;
@@ -105,45 +154,64 @@ public class CharControl : MonoBehaviour {
 				break;
 			
 			case JumpState.FALLING: 
-				if (isGrounded () && rigidbody2D.velocity.y <= 0) {
+				if (isGrounded () && GetComponent<Rigidbody2D>().velocity.y <= 0) {
 					Jump = JumpState.GROUNDED;
 				}
 			//DashAttack ();
 				break;
 			
 			}
+			lockfuction();
 
-			DashAttack (); //Player can dash in any JumpState
+
+		} else {
+			playerStats.isDead = false;
+			Debug.Log ("in dying update");
+			spawnMan.killPlayer (gameObject);
 		}
 	}
 
+
 	void DashAttack(){
+
 		float xTotal = 0f;
 		float yTotal = 0f;
-		if (!dashLock) { //player can only dash once per jump
+		if (!dashLock && (Input.GetKey(dashLeft) || Input.GetKey (dashRight))) { //player can only dash once per jump
+			AudioSource.PlayClipAtPoint(dashAud, transform.position);
+			GetComponent<Rigidbody2D>().drag = 10f;
+		    GetComponent<Rigidbody2D>().velocity = new Vector2 (0, GetComponent<Rigidbody2D>().velocity.y); //Vector2.zero
+			dashParts.Play(); //play 
 			if (Input.GetKey (dashRight)) {
 				Flip (1);
 				//rigidbody2D.AddForce (new Vector2 (100, 0));
 				xTotal = dashX;
-				playerStats.currentHealth-=10;
+				//playerStats.currentHealth-=10;
+			    lockTimeStamp = Time.time + dashCD;
+				dashTimeStamp = Time.time + .4f;
 				dashLock = true;
+				isDashing = true;
 			} else if (Input.GetKey (dashLeft)) {
 				Flip (-1);
 				//rigidbody2D.AddForce (new Vector2 (-100, 0));
 				xTotal = -dashX;
-				playerStats.currentHealth-=10;
+				lockTimeStamp = Time.time + dashCD;
+				dashTimeStamp = Time.time + .4f;
+				//playerStats.currentHealth-=10;
 				dashLock = true;
+				isDashing = true;
 			}
 			//dashLock = true;
-		}
+
 		//Jump = JumpState.FALLING;
 		//CurrJumpForce = 0;
-		rigidbody2D.AddForce (new Vector2 (xTotal, yTotal));
 
+		GetComponent<Rigidbody2D>().AddForce (new Vector2 (xTotal, yTotal));
 	}
 
+	//	if(player.name.Equals ("Player1")
+	}
 	void assignPlayerControls(){
-		if(player.name.Equals("Player1")){
+		if(PlayerNum == 1){
 			moveLeft = KeyCode.A;
 			moveRight = KeyCode.D;
 			jump = KeyCode.W;
@@ -151,7 +219,7 @@ public class CharControl : MonoBehaviour {
 			dashRight = KeyCode.E;
 			Debug.Log ("Player 1 Controls Set");
 		}
-		else if (player.name.Equals("Player2")){
+		else if (PlayerNum == 2){
 			moveLeft = KeyCode.J;
 			moveRight = KeyCode.L;
 			jump = KeyCode.I;
@@ -161,6 +229,28 @@ public class CharControl : MonoBehaviour {
 		}
 	}
 
+	// 
+	void lockfuction(){
+		if (lockTimeStamp <= Time.time){
+			dashLock = false;
+		}
+		if (dashTimeStamp <= Time.time) {
+			GetComponent<Rigidbody2D>().drag = 0;
+			isDashing = false;
+		}
+		if (damageTimeStamp <= Time.time) {
+			singleDamageDealt = false;
+		}
+	}
+
+	void dealDamage() {
+		if ((colliding == true) && (isDashing == true) && (singleDamageDealt == false) && enemy != null) {
+			AudioSource.PlayClipAtPoint(hitAuds[Random.Range(0, hitAuds.Length)], transform.position);
+			enemy.GetComponent<PlayerStats>().currentHealth-=(5 * (Mathf.Abs (GetComponent<Rigidbody2D>().velocity.x)/10));
+			singleDamageDealt = true;
+			damageTimeStamp = Time.time + .5f;
+		}
+	}
 	void Flip(float moveH)
 	{
 		if (moveH > 0)

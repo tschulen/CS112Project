@@ -1,9 +1,12 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class InAttackRange : MonoBehaviour {
 	private CharControl player;
 	public GameObject camera;
+
+	//public int damageVariable = 10;
+
 	// Use this for initialization
 	void Start () {
 		player = transform.parent.GetComponent<CharControl>();
@@ -18,10 +21,17 @@ public class InAttackRange : MonoBehaviour {
 	}
 
 	void OnTriggerEnter2D (Collider2D objectCollidedWith) {
-		player.colliding = true;
+		if (objectCollidedWith.tag == "Player") { 
+			player.enemy = objectCollidedWith.gameObject;
+			player.colliding = true;
+
+		}
 	}
 
 	void OnTriggerExit2D (Collider2D objectCollidedWith) {
-		player.colliding = false;
+		if (objectCollidedWith.tag == "Player") {
+			player.colliding = false;
+			player.enemy = null;
+		}
 	}
 }
